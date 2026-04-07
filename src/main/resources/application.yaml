@@ -10,8 +10,11 @@ spring:
 
   flyway:
     enabled: true
-    baseline-on-migrate: true # Útil se o seu banco já tiver tabelas criadas manualmente
+    baseline-on-migrate: true
     locations: classpath:db/migration
+
+  rabbitmq:
+    addresses: amqps://ebfdrsai:6KK8UUnafbW1CQEq6q1Ye5cUMYzQdv_U@gerbil.rmq.cloudamqp.com/ebfdrsai
 
   jpa:
     hibernate:

@@ -1,5 +1,6 @@
 package com.example.priceflow.infrastructure;
 
+import com.example.priceflow.infrastructure.scraper.AmazonScraper;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;

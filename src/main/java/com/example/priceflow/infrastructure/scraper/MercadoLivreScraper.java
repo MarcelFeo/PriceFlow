@@ -1,4 +1,4 @@
-package com.example.priceflow.infrastructure;
+package com.example.priceflow.infrastructure.scraper;
 
 import com.example.priceflow.utils.MoneyUtils;
 import org.jsoup.Jsoup;

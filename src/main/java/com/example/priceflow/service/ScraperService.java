@@ -1,6 +1,6 @@
 package com.example.priceflow.service;
 
-import com.example.priceflow.infrastructure.PriceScraper;
+import com.example.priceflow.infrastructure.scraper.PriceScraper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;

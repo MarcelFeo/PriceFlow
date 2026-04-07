@@ -1,4 +1,4 @@
-package com.example.priceflow.infrastructure;
+package com.example.priceflow.infrastructure.scraper;
 
 import java.io.IOException;
 import java.math.BigDecimal;

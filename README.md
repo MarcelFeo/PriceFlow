@@ -175,17 +175,24 @@ priceflow/
 │   │   ├── java/com/example/priceflow/
 │   │   │   ├── PriceflowApplication.java          # Classe principal
 │   │   │   │
+│   │   │   ├── controller/                        # Controladores REST
+│   │   │   │   └── ProductController.java         # Endpoints da API
+│   │   │   │
 │   │   │   ├── domain/                            # Entidades do domínio
 │   │   │   │   ├── Product.java                   # Produto
 │   │   │   │   ├── ProductId.java                 # ID composto
 │   │   │   │   └── PriceHistory.java              # Histórico de preços
 │   │   │   │
 │   │   │   ├── dto/                               # Data Transfer Objects
+│   │   │   │   ├── CreateProductRequestDTO.java   # Request para criar produto
+│   │   │   │   ├── ProductResponseDTO.java        # Response do produto
+│   │   │   │   ├── PriceHistoryResponseDTO.java   # Response do histórico
+│   │   │   │   ├── AllProductsHistoryResponseDTO.java # Response de todos
 │   │   │   │   └── EmailNotificationDTO.java      # DTO de notificação
 │   │   │   │
 │   │   │   ├── repository/                        # Repositórios (Data Access)
-│   │   │   │   ├── ProductRepository.java
-│   │   │   │   └── PriceHistoryRepository.java
+│   │   │   │   ├── ProductRepository.java         # Custom queries
+│   │   │   │   └── PriceHistoryRepository.java    # Custom queries
 │   │   │   │
 │   │   │   ├── service/                           # Lógica de negócio
 │   │   │   │   ├── ScraperService.java            # Orquestração de scrapers
@@ -213,16 +220,21 @@ priceflow/
 │   │       ├── application.yaml                   # Configurações
 │   │       ├── db/
 │   │       │   └── migration/
-│   │       │       └── V1__create_table_*.sql     # Scripts Flyway
+│   │       │       ├── V1__create_table_*.sql     # Scripts Flyway - Tabelas
+│   │       │       └── V2__add_last_price_*.sql   # Scripts Flyway - Coluna
 │   │       ├── static/                            # Arquivos estáticos
 │   │       └── templates/                         # Templates Thymeleaf
 │   │
 │   └── test/
 │       └── java/com/example/priceflow/
 │           ├── PriceflowApplicationTests.java
+│           ├── controller/
+│           │   └── ProductControllerTest.java     # Testes da API
 │           ├── infrastructure/
 │           │   ├── AmazonScraperTest.java
 │           │   └── MercadoLivreScraperTest.java
+│           ├── service/
+│           │   └── PriceCheckSchedulerTest.java   # Testes do scheduler
 │           └── utils/
 │               └── MoneyUtilsTest.java
 │
@@ -517,66 +529,318 @@ public class PriceHistory {
 
 ## 🌐 APIs REST
 
-### 1. Obter Preço Atual
-
-```http
-GET /api/price?url=https://www.amazon.com.br/dp/...
+### Base URL
+```
+http://localhost:8080/api/products
 ```
 
-**Resposta (200 OK)**:
-```json
+---
+
+### 1. Registrar Novo Produto para Monitoramento
+
+**Endpoint**: `POST /api/products`
+
+Cria um novo produto para monitorar seu preço ao longo do tempo. Realiza web scraping automático para obter o preço inicial.
+
+**Request**:
+```http
+POST /api/products HTTP/1.1
+Content-Type: application/json
+
 {
-  "url": "https://www.amazon.com.br/dp/...",
-  "price": 99.99,
-  "store": "AMAZON",
-  "checkedAt": "2024-04-08T10:30:00"
+  "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+  "email": "usuario@example.com"
 }
 ```
 
-### 2. Obter Histórico de Preços
+**Parâmetros**:
+| Campo | Tipo | Obrigatório | Descrição |
+|-------|------|-------------|-----------|
+| `url` | string | ✅ | URL do produto no e-commerce |
+| `email` | string | ✅ | Email do usuário para notificações |
 
-```http
-GET /api/history/{productId}
-```
-
-**Resposta (200 OK)**:
+**Response (201 Created)**:
 ```json
 {
-  "productId": "amazon-B07EXAMPLE",
-  "productName": "Produto Exemplo",
+  "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+  "email": "usuario@example.com",
+  "name": "dp/B07XLP9TPC",
+  "lastPrice": 2999.90,
   "history": [
     {
-      "date": "2024-04-08",
-      "price": 99.99
-    },
-    {
-      "date": "2024-04-07",
-      "price": 89.99
+      "id": 1,
+      "price": 2999.90,
+      "capturedAt": "2024-04-08T14:30:00"
     }
   ]
 }
 ```
 
-### 3. Registrar Monitoramento
+**Status Codes**:
+- `201` - Produto criado com sucesso
+- `400` - Erro na validação ou scraping falhou
+- `409` - Produto já existe para este usuário
 
+**Exemplo com cURL**:
+```bash
+curl -X POST http://localhost:8080/api/products \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+    "email": "usuario@example.com"
+  }'
+```
+
+---
+
+### 2. Obter Histórico de TODOS os Produtos
+
+**Endpoint**: `GET /api/products/history`
+
+Retorna o histórico de preços de todos os produtos monitorados.
+
+**Request**:
 ```http
-POST /api/monitor
-Content-Type: application/json
+GET /api/products/history HTTP/1.1
+```
 
+**Response (200 OK)**:
+```json
 {
-  "url": "https://www.amazon.com.br/dp/...",
-  "userEmail": "usuario@example.com",
-  "priceThreshold": 50.00
+  "totalProducts": 2,
+  "products": [
+    {
+      "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+      "email": "usuario@example.com",
+      "name": "Notebook ABC",
+      "lastPrice": 2500.00,
+      "history": [
+        {
+          "id": 1,
+          "price": 3000.00,
+          "capturedAt": "2024-04-08T10:00:00"
+        },
+        {
+          "id": 2,
+          "price": 2500.00,
+          "capturedAt": "2024-04-08T12:00:00"
+        }
+      ]
+    },
+    {
+      "url": "https://www.mercadolivre.com.br/item/ABC123",
+      "email": "usuario2@example.com",
+      "name": "Mouse Gamer",
+      "lastPrice": 89.90,
+      "history": [
+        {
+          "id": 10,
+          "price": 99.90,
+          "capturedAt": "2024-04-08T11:00:00"
+        },
+        {
+          "id": 11,
+          "price": 89.90,
+          "capturedAt": "2024-04-08T13:00:00"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-**Resposta (201 Created)**:
+**Exemplo com cURL**:
+```bash
+curl -X GET http://localhost:8080/api/products/history
+```
+
+---
+
+### 3. Obter Histórico de um Produto Específico (por URL)
+
+**Endpoint**: `GET /api/products/history/details?url={url}`
+
+Retorna o histórico de preços de um produto específico identificado pela URL.
+
+**Request**:
+```http
+GET /api/products/history/details?url=https://www.amazon.com.br/dp/B07XLP9TPC HTTP/1.1
+```
+
+**Query Parameters**:
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `url` | string | ✅ | URL do produto (deve ser URL encoded) |
+
+**Response (200 OK)**:
 ```json
 {
-  "monitorId": "uuid-xxx",
-  "status": "ACTIVE",
-  "message": "Monitoramento iniciado com sucesso"
+  "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+  "email": "usuario@example.com",
+  "name": "Notebook ABC",
+  "lastPrice": 2500.00,
+  "history": [
+    {
+      "id": 2,
+      "price": 2500.00,
+      "capturedAt": "2024-04-08T12:00:00"
+    },
+    {
+      "id": 1,
+      "price": 3000.00,
+      "capturedAt": "2024-04-08T10:00:00"
+    }
+  ]
 }
+```
+
+**Status Codes**:
+- `200` - Sucesso
+- `404` - Produto não encontrado
+
+**Exemplo com cURL**:
+```bash
+curl -X GET "http://localhost:8080/api/products/history/details?url=https://www.amazon.com.br/dp/B07XLP9TPC"
+```
+
+---
+
+### 4. Obter Histórico por URL e Email do Usuário
+
+**Endpoint**: `GET /api/products/history/user?url={url}&email={email}`
+
+Retorna o histórico de um produto específico for um usuário específico.
+
+**Request**:
+```http
+GET /api/products/history/user?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com HTTP/1.1
+```
+
+**Query Parameters**:
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `url` | string | ✅ | URL do produto |
+| `email` | string | ❌ | Email do usuário (filtro opcional) |
+
+**Response (200 OK)**:
+```json
+{
+  "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+  "email": "usuario@example.com",
+  "name": "Notebook ABC",
+  "lastPrice": 2500.00,
+  "history": [...]
+}
+```
+
+**Exemplo com cURL**:
+```bash
+curl -X GET "http://localhost:8080/api/products/history/user?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com"
+```
+
+---
+
+### 5. Obter Detalhes de um Produto Específico
+
+**Endpoint**: `GET /api/products?url={url}&email={email}`
+
+Retorna os detalhes completos de um produto pelo seu ID (URL + Email).
+
+**Request**:
+```http
+GET /api/products?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com HTTP/1.1
+```
+
+**Query Parameters**:
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `url` | string | ✅ | URL do produto |
+| `email` | string | ✅ | Email do usuário |
+
+**Response (200 OK)**:
+```json
+{
+  "url": "https://www.amazon.com.br/dp/B07XLP9TPC",
+  "email": "usuario@example.com",
+  "name": "Notebook ABC",
+  "lastPrice": 2500.00,
+  "history": [...]
+}
+```
+
+**Status Codes**:
+- `200` - Sucesso
+- `404` - Produto não encontrado
+
+**Exemplo com cURL**:
+```bash
+curl -X GET "http://localhost:8080/api/products?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com"
+```
+
+---
+
+### 6. Remover Produto do Monitoramento
+
+**Endpoint**: `DELETE /api/products?url={url}&email={email}`
+
+Remove um produto do monitoramento (exclui o produto e seu histórico).
+
+**Request**:
+```http
+DELETE /api/products?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com HTTP/1.1
+```
+
+**Query Parameters**:
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `url` | string | ✅ | URL do produto |
+| `email` | string | ✅ | Email do usuário |
+
+**Response (204 No Content)**:
+```
+(sem corpo)
+```
+
+**Status Codes**:
+- `204` - Produto removido com sucesso
+- `404` - Produto não encontrado
+
+**Exemplo com cURL**:
+```bash
+curl -X DELETE "http://localhost:8080/api/products?url=https://www.amazon.com.br/dp/B07XLP9TPC&email=usuario@example.com"
+```
+
+---
+
+## 💡 Lojas Suportadas
+
+O sistema atualmente suporta scraping de:
+- ✅ **Amazon** - `amazon.com.br`
+- ✅ **Mercado Livre** - `mercadolivre.com.br`
+
+Ao tentar adicionar um produto de uma loja não suportada, receberá um erro `400 Bad Request`.
+
+---
+
+## 📋 Fluxo Completo de Uso
+
+```
+1. POST /api/products
+   ↓ Cria produto e faz scraping inicial
+   
+2. Scheduler executa a cada 2 horas (PriceCheckScheduler)
+   ↓ Verifica preço
+   ↓ Se diminuiu: envia email
+   ↓ Atualiza histórico
+   
+3. GET /api/products/history
+   ↓ Consulta histórico de todos os produtos
+   
+4. GET /api/products/history/details
+   ↓ Consulta histórico específico
+   
+5. DELETE /api/products
+   ↓ Remove produto quando não interessado mais
 ```
 
 ---

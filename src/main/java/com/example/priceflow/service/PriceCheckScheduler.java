@@ -27,12 +27,6 @@ public class PriceCheckScheduler {
     private final ScraperService scraperService;
     private final AlertPublisherService alertPublisherService;
 
-    /**
-     * Verifica preços de todos os produtos a cada 2 horas
-     * Envia notificação por email se o preço diminuiu
-     *
-     * Cron: 0 0 */2 * * * (a cada 2 horas)
-     */
     @Scheduled(cron = "0 0 */2 * * *")
     @Transactional
     public void checkPrices() {

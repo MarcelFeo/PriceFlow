@@ -1,27 +1,27 @@
 package com.example.priceflow.infrastructure.messaging;
 
-import com.example.priceflow.dto.EmailDto;
+import com.example.priceflow.dto.EmailNotificationDTO;
+import com.example.priceflow.infrastructure.email.EmailService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-
-import static com.example.priceflow.infrastructure.messaging.RabbitMQConstants.EMAIL_QUEUE;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailConsumer {
 
-    private final JavaMailSender mailSender;
+    private final EmailService emailService;
 
-    @RabbitListener(queues = EMAIL_QUEUE)
-    public void listen(EmailDto email) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email.to());
-        message.setSubject(email.subject());
-        message.setText(email.body());
-        mailSender.send(message);
+    @RabbitListener(queues = RabbitMQConstants.EMAIL_QUEUE)
+    public void consumeEmailNotification(EmailNotificationDTO notification) {
+        log.info("Mensagem recebida da fila: {}", notification);
+        try {
+            emailService.sendPriceAlertEmail(notification);
+        } catch (Exception e) {
+            log.error("Erro ao processar notificação de email: {}", notification, e);
+            throw e;
+        }
     }
-
 }

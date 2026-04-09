@@ -24,3 +24,19 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: marcelfeo29@gmail.com
+    password: sqnu rpnk sjtj xlwd # Use App Password do Gmail (https://myaccount.google.com/apppasswords)
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000

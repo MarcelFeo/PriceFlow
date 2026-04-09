@@ -23,6 +23,9 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "last_price", nullable = true)
+    private java.math.BigDecimal lastPrice;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<PriceHistory> history = new ArrayList<>();
 

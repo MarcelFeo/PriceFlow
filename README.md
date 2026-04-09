@@ -11,6 +11,8 @@ Um sistema inteligente de monitoramento de preços que acompanha mudanças em pr
 
 O **PriceFlow** é uma aplicação backend desenvolvida em Spring Boot que realiza web scraping de preços em plataformas de e-commerce brasileiras (Amazon e Mercado Livre) e notifica os usuários através de emails quando detecta mudanças de preço nos produtos monitorados.
 
+**Link da API:** https://priceflow-ari6.onrender.com
+
 ---
 
 ## 🛠️ Tecnologias Utilizadas

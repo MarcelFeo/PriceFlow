@@ -16,3 +16,6 @@ spring:
     port: 587
     username: ${MAIL_USER}
     password: ${MAIL_PASS}
+
+  server:
+    port: ${PORT:8080}

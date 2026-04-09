@@ -13,7 +13,7 @@ public interface PriceHistoryRepository extends JpaRepository<PriceHistory, Long
     /**
      * Busca todo o histórico de preço de um produto
      * Ordenado por data (mais recentes primeiro)
-     * 
+     *
      * @param product Produto
      * @return Lista de histórico de preços
      */
@@ -22,7 +22,7 @@ public interface PriceHistoryRepository extends JpaRepository<PriceHistory, Long
     /**
      * Busca histórico de preço por URL do produto
      * Ordenado por data (mais recentes primeiro)
-     * 
+     *
      * @param url URL do produto
      * @return Lista de histórico de preços
      */
@@ -34,7 +34,7 @@ public interface PriceHistoryRepository extends JpaRepository<PriceHistory, Long
     /**
      * Busca histórico de preço por URL e email do usuário
      * Ordenado por data (mais recentes primeiro)
-     * 
+     *
      * @param url URL do produto
      * @param email Email do usuário
      * @return Lista de histórico de preços

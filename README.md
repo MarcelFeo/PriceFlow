@@ -817,18 +817,18 @@ Ao tentar adicionar um produto de uma loja não suportada, receberá um erro `40
 ```
 1. POST /api/products
    ↓ Cria produto e faz scraping inicial
-   
+
 2. Scheduler executa a cada 2 horas (PriceCheckScheduler)
    ↓ Verifica preço
    ↓ Se diminuiu: envia email
    ↓ Atualiza histórico
-   
+
 3. GET /api/products/history
    ↓ Consulta histórico de todos os produtos
-   
+
 4. GET /api/products/history/details
    ↓ Consulta histórico específico
-   
+
 5. DELETE /api/products
    ↓ Remove produto quando não interessado mais
 ```

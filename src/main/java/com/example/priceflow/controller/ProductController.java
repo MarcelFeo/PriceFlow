@@ -33,19 +33,19 @@ public class ProductController {
 
     /**
      * POST /api/products
-     * 
+     *
      * Registra um novo produto para monitoramento
      * Realiza web scraping para obter o preço inicial
-     * 
+     *
      * @param request DTO com URL do produto e email do usuário
      * @return Produto criado com o preço inicial
      */
     @PostMapping
     public ResponseEntity<ProductResponseDTO> createProduct(
             @Valid @RequestBody CreateProductRequestDTO request) {
-        
+
         log.info("Registrando novo produto: URL={}, Email={}", request.url(), request.email());
-        
+
         // Verifica se produto já existe
         var existingProduct = productRepository.findByUrlAndEmail(request.url(), request.email());
         if (existingProduct.isPresent()) {
@@ -87,20 +87,25 @@ public class ProductController {
 
     /**
      * GET /api/products/history
-     * 
+     *
      * Retorna o histórico de preços de TODOS os produtos monitorados
-     * 
+     *
      * @return Lista de todos os produtos com seus históricos
      */
     @GetMapping("/history")
     public ResponseEntity<AllProductsHistoryResponseDTO> getAllProductsHistory() {
         log.info("Buscando histórico de todos os produtos");
-        
+
         try {
             List<Product> allProducts = productRepository.findAll();
-            
+
             List<ProductResponseDTO> productResponses = allProducts.stream()
+                    .filter(product -> product != null &&
+                            product.getId() != null &&
+                            product.getId().getUrl() != null &&
+                            !product.getId().getUrl().isEmpty())
                     .map(this::toProductResponse)
+                    .filter(dto -> dto != null)
                     .collect(Collectors.toList());
 
             AllProductsHistoryResponseDTO response = new AllProductsHistoryResponseDTO(
@@ -118,125 +123,10 @@ public class ProductController {
     }
 
     /**
-     * GET /api/products/{url}/history
-     * 
-     * Retorna o histórico de preços de um produto específico
-     * 
-     * @param url URL do produto (enviada como query parameter)
-     * @return Histórico de preços do produto específico
-     */
-    @GetMapping("/history/details")
-    public ResponseEntity<ProductResponseDTO> getProductHistory(
-            @RequestParam String url) {
-        
-        log.info("Buscando histórico do produto: {}", url);
-        
-        try {
-            // Busca o produto
-            Product product = productRepository.findByUrl(url)
-                    .orElseThrow(() -> {
-                        log.warn("Produto não encontrado: {}", url);
-                        return new IllegalArgumentException("Produto não encontrado");
-                    });
-
-            // Retorna com histórico carregado
-            ProductResponseDTO response = toProductResponse(product);
-            log.info("Histórico encontrado para produto: {} com {} registros", 
-                    url, response.history().size());
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            log.error("Erro ao buscar histórico do produto: {}", url, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * GET /api/products/{url}/history?email={email}
-     * 
-     * Retorna o histórico de preços de um produto específico para um usuário específico
-     * 
-     * @param url URL do produto
-     * @param email Email do usuário (opcional)
-     * @return Histórico de preços do produto
-     */
-    @GetMapping("/history/user")
-    public ResponseEntity<ProductResponseDTO> getProductHistoryByUser(
-            @RequestParam String url,
-            @RequestParam(required = false) String email) {
-        
-        log.info("Buscando histórico do produto: {} para email: {}", url, email);
-        
-        try {
-            Product product;
-            
-            if (email != null && !email.isEmpty()) {
-                product = productRepository.findByUrlAndEmail(url, email)
-                        .orElseThrow(() -> {
-                            log.warn("Produto não encontrado para URL: {} e Email: {}", url, email);
-                            return new IllegalArgumentException("Produto não encontrado para este usuário");
-                        });
-            } else {
-                product = productRepository.findByUrl(url)
-                        .orElseThrow(() -> {
-                            log.warn("Produto não encontrado: {}", url);
-                            return new IllegalArgumentException("Produto não encontrado");
-                        });
-            }
-
-            ProductResponseDTO response = toProductResponse(product);
-            log.info("Histórico encontrado com {} registros", response.history().size());
-            return ResponseEntity.ok(response);
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            log.error("Erro ao buscar histórico do produto", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
-     * GET /api/products/{id}
-     * 
-     * Retorna os detalhes de um produto específico
-     * 
-     * @param url URL do produto
-     * @param email Email do usuário
-     * @return Detalhes do produto
-     */
-    @GetMapping
-    public ResponseEntity<ProductResponseDTO> getProduct(
-            @RequestParam String url,
-            @RequestParam String email) {
-        
-        log.debug("Buscando produto específico: URL={}, Email={}", url, email);
-        
-        try {
-            ProductId productId = new ProductId(url, email);
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> {
-                        log.warn("Produto não encontrado: {}", productId);
-                        return new IllegalArgumentException("Produto não encontrado");
-                    });
-
-            return ResponseEntity.ok(toProductResponse(product));
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            log.error("Erro ao buscar produto", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    /**
      * DELETE /api/products
-     * 
+     *
      * Remove um produto do monitoramento
-     * 
+     *
      * @param url URL do produto
      * @param email Email do usuário
      * @return Status 204 No Content
@@ -245,9 +135,9 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(
             @RequestParam String url,
             @RequestParam String email) {
-        
+
         log.info("Removendo produto: URL={}, Email={}", url, email);
-        
+
         try {
             ProductId productId = new ProductId(url, email);
             if (!productRepository.existsById(productId)) {
@@ -270,16 +160,27 @@ public class ProductController {
     /**
      * Converte uma entidade Product para ProductResponseDTO
      * Inclui o histórico de preços ordenado
-     * 
+     *
      * @param product Entidade Product
      * @return DTO de resposta
      */
     private ProductResponseDTO toProductResponse(Product product) {
+        // Validação defensiva
+        if (product == null || product.getId() == null) {
+            log.warn("Produto ou ID nulo detectado");
+            return null;
+        }
+
+        String url = product.getId().getUrl();
+        String email = product.getId().getEmail();
+
+        if (url == null || url.isEmpty() || email == null || email.isEmpty()) {
+            log.warn("URL ou email vazio detectado para produto");
+            return null;
+        }
+
         List<PriceHistory> history = priceHistoryRepository
-                .findByProductUrlAndEmailOrderByDateDesc(
-                        product.getId().getUrl(),
-                        product.getId().getEmail()
-                );
+                .findByProductUrlAndEmailOrderByDateDesc(url, email);
 
         List<PriceHistoryResponseDTO> historyDto = history.stream()
                 .map(ph -> new PriceHistoryResponseDTO(
@@ -290,8 +191,8 @@ public class ProductController {
                 .collect(Collectors.toList());
 
         return new ProductResponseDTO(
-                product.getId().getUrl(),
-                product.getId().getEmail(),
+                url,
+                email,
                 product.getName(),
                 product.getLastPrice(),
                 historyDto
@@ -301,7 +202,7 @@ public class ProductController {
     /**
      * Extrai um nome legível da URL do produto
      * Exemplo: https://www.amazon.com.br/dp/B07XLP9TPC -> "B07XLP9TPC"
-     * 
+     *
      * @param url URL do produto
      * @return Nome extraído
      */

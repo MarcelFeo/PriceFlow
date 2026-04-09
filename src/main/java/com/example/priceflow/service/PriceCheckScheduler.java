@@ -27,7 +27,7 @@ public class PriceCheckScheduler {
     private final ScraperService scraperService;
     private final AlertPublisherService alertPublisherService;
 
-    @Scheduled(cron = "0 0 */2 * * *")
+    @Scheduled(cron = "0 0 */24 * * *")
     @Transactional
     public void checkPrices() {
         log.info("Iniciando verificação de preços dos produtos...");

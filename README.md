@@ -7,6 +7,8 @@ Um sistema inteligente de monitoramento de preços que acompanha mudanças em pr
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Latest-blue?logo=postgresql)
 ![RabbitMQ](https://img.shields.io/badge/RabbitMQ-AMQP-orange?logo=rabbitmq)
 
+**LINK PARA O FRONTEND:** https://github.com/MarcelFeo/priceflow-frontend
+
 ## 📋 Descrição
 
 O **PriceFlow** é uma aplicação backend desenvolvida em Spring Boot que realiza web scraping de preços em plataformas de e-commerce brasileiras (Amazon e Mercado Livre) e notifica os usuários através de emails quando detecta mudanças de preço nos produtos monitorados.
